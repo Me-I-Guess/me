@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Just tell me what happens.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #FFD700;
+            --secondary-color: #FF69B4;
+            --background-color: #111;
+            --text-color: #333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Comic Neue', cursive;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            border: 5px solid var(--primary-color);
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            color: var(--secondary-color);
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px var(--primary-color);
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 2rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 3px solid var(--secondary-color);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Comic Neue', cursive;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            padding: 0.75rem 1.5rem;
+            border: 3px solid var(--text-color);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-family: 'Comic Neue', cursive;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+            transform: scale(1.05);
+        }
+
+        #results {
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border: 3px dashed var(--secondary-color);
+        }
+
+        #loading {
+            text-align: center;
+            color: var(--secondary-color);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        #analysisResult {
+            background-color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        #analysisResult h2 {
+            color: var(--secondary-color);
+            margin-top: 0;
+            font-size: 1.5rem;
+        }
+
+        #analysisResult p {
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        #analysisResult strong {
+            color: var(--primary-color);
+            background-color: var(--text-color);
+            padding: 0 5px;
+            border-radius: 5px;
+        }
+
+        .background-text {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-auto-rows: 200px;
+            gap: 1px;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+            background-color: #111;
+        }
+
+        .background-text-item {
+            background-color: #222;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .background-text-item p:first-child {
+            margin-bottom: 5px;
+        }
+
+        @media (min-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            form {
+                flex-direction: row;
+            }
+
+            input[type="text"] {
+                flex-grow: 1;
+            }
+
+            button:hover {
+                transform: scale(1.1) rotate(5deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-text"></div>
+    <div class="container">
+        <h1>Just tell me what happens.</h1>
+        
+        <form id="analyzeForm">
+            <input type="text" id="videoUrl" name="videoUrl" placeholder="Paste YouTube URL here" required>
+            <button type="submit">Analyze</button>
+        </form>
+
+        <div id="results">
+            <p id="loading" style="display: none;">Analyzing</p>
+            <div id="analysisResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // Background text generation
+        const backgroundText = document.querySelector('.background-text');
+        const message = "The image you are requesting takes too much time so we gave up.";
+        const domain = "tellmewhathappens.com";
+        for (let i = 0; i < 100; i++) {
+            const div = document.createElement('div');
+            div.className = 'background-text-item';
+            div.innerHTML = `<p>${message}</p><p>${domain}</p>`;
+            backgroundText.appendChild(div);
+        }
+
+        let loadingAnimationInterval;
+
+        document.getElementById('analyzeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const videoUrl = document.getElementById('videoUrl').value;
+            const loadingElement = document.getElementById('loading');
+            const resultElement = document.getElementById('analysisResult');
+
+            loadingElement.style.display = 'block';
+            resultElement.innerHTML = '';
+
+            startLoadingAnimation();
+
+            // Simulating API call
+            setTimeout(() => {
+                stopLoadingAnimation();
+                displayResults({ output: "This is a placeholder result. The actual API integration is not implemented in this version." });
+            }, 3000);
+        });
+
+        function startLoadingAnimation() {
+            const loadingElement = document.getElementById('loading');
+            let dots = '';
+            loadingAnimationInterval = setInterval(() => {
+                dots = dots.length < 3 ? dots + '.' : '';
+                loadingElement.textContent = 'Analyzing' + dots;
+            }, 200);
+        }
+
+        function stopLoadingAnimation() {
+            clearInterval(loadingAnimationInterval);
+        }
+
+        function displayResults(outputs) {
+            const loadingElement = document.getElementById('loading');
+            const resultElement = document.getElementById('analysisResult');
+
+            loadingElement.style.display = 'none';
+            
+            if (outputs && outputs.output) {
+                resultElement.innerHTML = `
+                    <h2>Watched it for you:</h2>
+                    <p><strong>Basically...</strong> ${outputs.output}</p>
+                `;
+            } else {
+                resultElement.innerHTML = `
+                    <h2>Oops!</h2>
+                    <p>No analysis found. Maybe try another video?</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
