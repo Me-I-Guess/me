@@ -1,143 +1,158 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>阿琳焦虑缓解系统</title>
+    <title>YouTube Video Summarizer</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f0f0f0;
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
         }
         .container {
             background-color: white;
             padding: 2rem;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
         }
         h1 {
-            color: #2c3e50;
+            color: #333;
             text-align: center;
+            margin-bottom: 1.5rem;
         }
         input[type="text"] {
-            width: 70%;
-            padding: 10px;
-            font-size: 16px;
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
             border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 1rem;
         }
         button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #3498db;
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 4px;
+            font-size: 1rem;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
-        #result {
-            margin-top: 20px;
-            font-size: 16px;
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #status, #summary {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        #summary {
             white-space: pre-wrap;
             word-wrap: break-word;
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            padding: 10px;
-            background-color: #f9f9f9;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>阿琳焦虑缓解系统</h1>
-        <input type="text" id="question" placeholder="你想知道的问题名字，例：湿疹" />
-        <button onclick="askQuestion()">搜索</button>
-        <div id="result"></div>
+        <h1>告诉我就完了</h1>
+        <input type="text" id="videoUrl" placeholder="Enter YouTube video URL">
+        <button onclick="summarizeVideo()" id="summarizeBtn">Summarize</button>
+        <div id="status"></div>
+        <div id="summary"></div>
     </div>
 
     <script>
-        function askQuestion() {
-            const question = document.getElementById('question').value;
-            const resultDiv = document.getElementById('result');
+        const userId = 'JK72P3Qyv4aSuhJVSNgB3TIKzfB3';
+        const apiKey = '00dea5bb4f3b4da59dc87d2a5c71437a';
+
+        async function summarizeVideo() {
+            const videoUrl = document.getElementById('videoUrl').value;
+            const statusElement = document.getElementById('status');
+            const summaryElement = document.getElementById('summary');
+            const summarizeBtn = document.getElementById('summarizeBtn');
             
-            resultDiv.innerHTML = '<p>正在查询...</p>';
+            statusElement.textContent = 'Starting summarization...';
+            summaryElement.textContent = '';
+            summarizeBtn.disabled = true;
 
-            const options = {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer 00dea5bb4f3b4da59dc87d2a5c71437a',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    "user_id": "JK72P3Qyv4aSuhJVSNgB3TIKzfB3",
-                    "saved_item_id": "ahcjdJiySVfJ66mX34rwTK",
-                    "pipeline_inputs": [{"input_name":"input","value": question}]
-                })
+            const startUrl = "https://api.gumloop.com/api/v1/start_pipeline";
+            const startPayload = {
+                "user_id": userId,
+                "saved_item_id": "svQhKM3FDKLTiu8yrhuzeu",
+                "pipeline_inputs": [{"input_name":"Youtubevideolink","value": videoUrl}]
+            };
+            const headers = {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json"
             };
 
-            fetch('https://api.gumloop.com/api/v1/start_pipeline', options)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Initial API Response:', data);
-                    if (data.run_id) {
-                        pollForResults(data.run_id);
-                    } else {
-                        resultDiv.innerHTML = '<p>无法获取结果，请稍后再试。</p>';
-                    }
-                })
-                .catch(err => {
-                    resultDiv.innerHTML = '<p>查询出错: ' + err.message + '</p>';
-                    console.error('Error:', err);
+            try {
+                const startResponse = await fetch(startUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(startPayload)
                 });
-        }
 
-        function pollForResults(runId) {
-            const resultDiv = document.getElementById('result');
-            const pollOptions = {
-                method: 'GET',
-                headers: {
-                    'Authorization': 'Bearer 00dea5bb4f3b4da59dc87d2a5c71437a'
+                if (!startResponse.ok) {
+                    throw new Error('Failed to start summarization');
                 }
-            };
 
-            const pollInterval = setInterval(() => {
-                fetch(`https://api.gumloop.com/api/v1/get_pl_run?run_id=${runId}&user_id=JK72P3Qyv4aSuhJVSNgB3TIKzfB3`, pollOptions)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Poll API Response:', data);
-                        if (data.state === 'DONE') {
-                            clearInterval(pollInterval);
-                            if (data.outputs && data.outputs.output) {
-                                console.log('Output to display:', data.outputs.output);
-                                displayFormattedResult(data.outputs.output);
-                            } else {
-                                resultDiv.innerHTML = '<p>无法获取结果，请稍后再试。</p>';
-                            }
-                        } else if (data.state === 'FAILED' || data.state === 'TERMINATED') {
-                            clearInterval(pollInterval);
-                            resultDiv.innerHTML = '<p>查询失败，请稍后再试。</p>';
-                        } else {
-                            resultDiv.innerHTML = `<p>正在处理... 状态: ${data.state}</p>`;
-                        }
-                    })
-                    .catch(err => {
-                        clearInterval(pollInterval);
-                        resultDiv.innerHTML = '<p>查询出错: ' + err.message + '</p>';
-                        console.error('Error:', err);
+                const startData = await startResponse.json();
+                const runId = startData.run_id;
+
+                statusElement.textContent = 'Summarization in progress...';
+
+                // Poll for results
+                while (true) {
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds
+
+                    const checkUrl = `https://api.gumloop.com/api/v1/get_pl_run?run_id=${runId}&user_id=${userId}`;
+                    const checkResponse = await fetch(checkUrl, {
+                        method: 'GET',
+                        headers: headers
                     });
-            }, 5000); // Poll every 5 seconds
-        }
 
-        function displayFormattedResult(output) {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = `<pre>${output}</pre>`;
+                    if (!checkResponse.ok) {
+                        throw new Error('Failed to check summarization status');
+                    }
+
+                    const checkData = await checkResponse.json();
+
+                    if (checkData.state === 'DONE') {
+                        if (checkData.outputs && checkData.outputs.output) {
+                            summaryElement.textContent = checkData.outputs.output;
+                            statusElement.textContent = 'Summarization completed!';
+                        } else {
+                            summaryElement.textContent = 'Summary completed, but no output found.';
+                        }
+                        break;
+                    } else if (checkData.state === 'FAILED') {
+                        throw new Error('Summarization failed');
+                    }
+
+                    statusElement.textContent = `Status: ${checkData.state}. Please wait...`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                statusElement.textContent = `An error occurred: ${error.message}`;
+            } finally {
+                summarizeBtn.disabled = false;
+            }
         }
     </script>
 </body>
 </html>
+
